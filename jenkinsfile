@@ -1,0 +1,75 @@
+pipeline {  
+  agent any  
+  
+  environment {  
+    CI = 'true'  
+  }  
+  
+  stages {  
+    stage('Checkout') {  
+      steps {  
+        checkout scm  
+      }  
+    }  
+  
+    stage('Install backend dependencies') {  
+      steps {  
+        script {  
+          if (isUnix()) {  
+            sh 'npm install'  
+          } else {  
+            bat 'npm install'  
+          }  
+        }  
+      }  
+    }  
+  
+    stage('Install frontend dependencies') {  
+      steps {  
+        dir('my-app') {  
+          script {  
+            if (isUnix()) {  
+              sh 'npm install'  
+            } else {  
+              bat 'npm install'  
+            }  
+          }  
+        }  
+      }  
+    }  
+  
+    stage('Test frontend') {  
+      steps {  
+        dir('my-app') {  
+          script {  
+            if (isUnix()) {  
+              sh 'npm test -- --watchAll=false'  
+            } else {  
+              bat 'npm test -- --watchAll=false'  
+            }  
+          }  
+        }  
+      }  
+    }  
+  
+    stage('Build frontend') {  
+      steps {  
+        dir('my-app') {  
+          script {  
+            if (isUnix()) {  
+              sh 'npm run build'  
+            } else {  
+              bat 'npm run build'  
+            }  
+          }  
+        }  
+      }  
+    }  
+  }  
+  
+  post {  
+    always {  
+      cleanWs()  
+    }  
+  }  
+} 
