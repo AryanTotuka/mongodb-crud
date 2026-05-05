@@ -40,14 +40,27 @@ pipeline {
   
     stage('Test frontend') {  
       steps {  
-        dir('my-app') {  
-          script {  
-            if (isUnix()) {  
+        script {  
+          if (isUnix()) {  
+            dir('my-app') {
               sh 'npm test -- --watchAll=false'  
-            } else {  
-              bat 'npm test -- --watchAll=false'  
-            }  
-          } 
+            }
+          } else {  
+            // Jest has a bug where it ignores tests inside directories starting with a dot (like .jenkins)
+            // Workaround: Move the my-app folder to a temporary directory outside the hidden folder,
+            // run the tests, and then move it back.
+            bat '''
+              if not exist "%TEMP%\\jenkins-workspaces" mkdir "%TEMP%\\jenkins-workspaces"
+              if exist "%TEMP%\\jenkins-workspaces\\%JOB_NAME%-my-app" rmdir /S /Q "%TEMP%\\jenkins-workspaces\\%JOB_NAME%-my-app"
+              move my-app "%TEMP%\\jenkins-workspaces\\%JOB_NAME%-my-app"
+              cd /D "%TEMP%\\jenkins-workspaces\\%JOB_NAME%-my-app"
+              call npm test -- --watchAll=false
+              set TEST_EXIT_CODE=%ERRORLEVEL%
+              cd /D "%WORKSPACE%"
+              move "%TEMP%\\jenkins-workspaces\\%JOB_NAME%-my-app" my-app
+              exit /B %TEST_EXIT_CODE%
+            '''
+          }  
         }  
       }  
     }  
